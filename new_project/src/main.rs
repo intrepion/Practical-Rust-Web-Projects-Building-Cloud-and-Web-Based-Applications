@@ -57,4 +57,24 @@ fn main() {
         .arg(&project_folder)
         .output()
         .expect("failed to create project");
+
+    Command::new("git")
+        .arg("add")
+        .arg("-A")
+        .output()
+        .expect("could not stage changes");
+
+    let commit_message = format!("cargo new {}", &project_folder);
+
+    Command::new("git")
+        .arg("commit")
+        .arg("-m")
+        .arg(commit_message)
+        .output()
+        .expect("could not commit changes");
+
+    Command::new("git")
+        .arg("push")
+        .output()
+        .expect("could not push changes");
 }
