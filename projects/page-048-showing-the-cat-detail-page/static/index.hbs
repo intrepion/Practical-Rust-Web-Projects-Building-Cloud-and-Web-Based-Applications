@@ -13,7 +13,7 @@
         <section class="cats">
             {{#each cats}}
                 <article class="cat">
-                    <h3>{{this.name}}</h3>
+                    <h3><a href="/cat/{{this.id}}">{{this.name}}</a></h3>
                     <img src="{{this.image_path}}" />
                 </article>
             {{/each}}

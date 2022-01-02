@@ -69,6 +69,24 @@ async fn add_cat_form(
         .finish())
 }
 
+async fn cat(
+    hb: web::Data<handlebars::Handlebars<'_>>,
+    pool: web::Data<DbPool>,
+    cat_id: web::Path<i32>,
+) -> Result<actix_web::HttpResponse, actix_web::Error> {
+    let connection = pool.get().expect("Can't get db connection from pool");
+    let cat_data = web::block(move || {
+        cats.filter(id.eq(cat_id.into_inner()))
+            .first::<Cat>(&connection)
+    })
+    .await
+    .map_err(|_| HttpResponse::InternalServerError().finish())?;
+
+    let body = hb.render("cat", &cat_data).unwrap();
+
+    Ok(HttpResponse::Ok().body(body))
+}
+
 async fn index(
     hb: web::Data<handlebars::Handlebars<'_>>,
     pool: web::Data<DbPool>,
@@ -111,6 +129,7 @@ async fn main() -> io::Result<()> {
             .route("/", web::get().to(index))
             .route("/add", web::get().to(add))
             .route("/add_cat_form", web::post().to(add_cat_form))
+            .route("/cat/{id}", web::get().to(cat))
     })
     .bind("127.0.0.1:8080")?
     .run()
