@@ -1,4 +1,4 @@
-use actix_files::{NamedFile};
+use actix_files::NamedFile;
 use actix_web::{web, App, HttpServer};
 use std::io;
 
