@@ -43,8 +43,10 @@ fn main() {
     Command::new("mkdir")
         .current_dir("..")
         .arg("projects")
-        .output()
-        .expect("could not create project folder");
+        .spawn()
+        .expect("failed to spawn mkdir")
+        .wait()
+        .expect("failed to wait mkdir");
 
     if Path::new(&project_path).exists() {
         println!("{} already exists", &project_path);
@@ -55,14 +57,18 @@ fn main() {
         .current_dir("../projects")
         .arg("new")
         .arg(&project_folder)
-        .output()
-        .expect("failed to create project");
+        .spawn()
+        .expect("failed to spawn cargo new")
+        .wait()
+        .expect("failed to wait cargo new");
 
     Command::new("git")
         .arg("add")
         .arg("-A")
-        .output()
-        .expect("could not stage changes");
+        .spawn()
+        .expect("failed to spawn git add")
+        .wait()
+        .expect("failed to wait git add");
 
     let commit_message = format!("cargo new {}", &project_folder);
 
@@ -70,11 +76,15 @@ fn main() {
         .arg("commit")
         .arg("-m")
         .arg(commit_message)
-        .output()
-        .expect("could not commit changes");
+        .spawn()
+        .expect("failed to spawn git commit")
+        .wait()
+        .expect("failed to wait git commit");
 
     Command::new("git")
         .arg("push")
-        .output()
-        .expect("could not push changes");
+        .spawn()
+        .expect("failed to spawn git push")
+        .wait()
+        .expect("failed to wait git push");
 }
