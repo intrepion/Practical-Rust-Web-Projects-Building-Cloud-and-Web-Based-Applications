@@ -64,15 +64,6 @@ fn main() {
 
     Command::new("cargo")
         .current_dir(&project_path)
-        .arg("add")
-        .arg("actix-web")
-        .spawn()
-        .expect("failed to spawn cargo add")
-        .wait()
-        .expect("failed to wait cargo add");
-
-    Command::new("cargo")
-        .current_dir(&project_path)
         .arg("build")
         .spawn()
         .expect("failed to spawn cargo build")
