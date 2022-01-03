@@ -17,13 +17,13 @@ use std::io;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-async fn cats_endpoint(pool: web::Data<DbPool>) -> Result<actix_web::HttpResponse, actix_web::Error> {
+async fn cats_endpoint(
+    pool: web::Data<DbPool>,
+) -> Result<actix_web::HttpResponse, actix_web::Error> {
     let connection = pool.get().expect("Can't get db connection from pool");
-    let cats_data = web::block(move || {
-        cats.limit(100).load::<Cat>(&connection)
-    })
-    .await
-    .map_err(|_| HttpResponse::InternalServerError().finish())?;
+    let cats_data = web::block(move || cats.limit(100).load::<Cat>(&connection))
+        .await
+        .map_err(|_| HttpResponse::InternalServerError().finish())?;
 
     Ok(HttpResponse::Ok().json(cats_data))
 }
@@ -40,10 +40,7 @@ async fn main() -> io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .service(
-                web::scope("/api")
-                    .route("/cats", web::get().to(cats_endpoint)),
-            )
+            .service(web::scope("/api").route("/cats", web::get().to(cats_endpoint)))
             .service(Files::new("/", "static").show_files_listing())
     })
     .bind("127.0.0.1:8080")?
