@@ -16,6 +16,7 @@ use actix_web::{error, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
+use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use std::env;
 use std::io;
 use validator::Validate;
@@ -95,6 +96,12 @@ fn setup_database() -> DbPool {
 async fn main() -> io::Result<()> {
     env_logger::init();
 
+    let mut builder = SslAcceptor::mozilla_intermediate(SslMethod::tls()).unwrap();
+    builder
+        .set_private_key_file("key-no-password.pem", SslFiletype::PEM)
+        .unwrap();
+    builder.set_certificate_chain_file("cert.pem").unwrap();
+
     let pool = setup_database();
 
     println!("Listing on 127.0.0.1 with port 8080");
@@ -105,7 +112,7 @@ async fn main() -> io::Result<()> {
             .configure(api_config)
             .service(Files::new("/", "static").show_files_listing())
     })
-    .bind("127.0.0.1:8080")?
+    .bind_openssl("127.0.0.1:8080", builder)?
     .run()
     .await
 }
