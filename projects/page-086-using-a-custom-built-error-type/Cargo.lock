@@ -1113,6 +1113,7 @@ dependencies = [
  "actix-files",
  "actix-rt 2.5.1",
  "actix-web",
+ "derive_more",
  "diesel",
  "r2d2",
  "serde",

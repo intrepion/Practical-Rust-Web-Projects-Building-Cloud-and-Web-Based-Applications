@@ -1,14 +1,16 @@
 #[macro_use]
 extern crate diesel;
 
+mod errors;
 mod models;
 mod schema;
 
+use self::errors::*;
 use self::models::*;
 use self::schema::cats::dsl::*;
 
 use actix_files::Files;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use actix_web::{error, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
@@ -35,16 +37,20 @@ fn api_config(cfg: &mut web::ServiceConfig) {
 async fn cat_endpoint(
     pool: web::Data<DbPool>,
     cat_id: web::Path<CatEndpointPath>,
-) -> Result<actix_web::HttpResponse, actix_web::Error> {
-    cat_id
-        .validate()
-        .map_err(|_| HttpResponse::BadRequest().finish())?;
+) -> Result<actix_web::HttpResponse, UserError> {
+    cat_id.validate().map_err(|_| UserError::ValidationError)?;
 
-    let connection = pool.get().expect("Can't get db connection from pool");
+    let connection = pool.get().map_err(|_| UserError::DBPoolGetError)?;
 
-    let cat_data = web::block(move || cats.filter(id.eq(cat_id.id)).first::<Cat>(&connection))
+    let query_id = cat_id.id.clone();
+    let cat_data = web::block(move || cats.filter(id.eq(query_id)).first::<Cat>(&connection))
         .await
-        .map_err(|_| HttpResponse::InternalServerError().finish())?;
+        .map_err(|e| match e {
+            error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                UserError::NotFoundError
+            }
+            _ => UserError::UnexpectedError,
+        })?;
 
     Ok(HttpResponse::Ok().json(cat_data))
 }
