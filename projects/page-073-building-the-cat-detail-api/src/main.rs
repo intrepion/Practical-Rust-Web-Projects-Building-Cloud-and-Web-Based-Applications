@@ -17,6 +17,32 @@ use std::io;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
+#[derive(serde::Deserialize)]
+struct CatEndpointPath {
+    id: i32,
+}
+
+fn api_config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::scope("/api")
+            .route("/cats", web::get().to(cats_endpoint))
+            .route("/cat/{id}", web::get().to(cat_endpoint)),
+    );
+}
+
+async fn cat_endpoint(
+    pool: web::Data<DbPool>,
+    cat_id: web::Path<CatEndpointPath>,
+) -> Result<actix_web::HttpResponse, actix_web::Error> {
+    let connection = pool.get().expect("Can't get db connection from pool");
+
+    let cat_data = web::block(move || cats.filter(id.eq(cat_id.id)).first::<Cat>(&connection))
+        .await
+        .map_err(|_| HttpResponse::InternalServerError().finish())?;
+
+    Ok(HttpResponse::Ok().json(cat_data))
+}
+
 async fn cats_endpoint(
     pool: web::Data<DbPool>,
 ) -> Result<actix_web::HttpResponse, actix_web::Error> {
@@ -44,7 +70,7 @@ async fn main() -> io::Result<()> {
     HttpServer::new(move || {
         App::new()
             .data(pool.clone())
-            .service(web::scope("/api").route("/cats", web::get().to(cats_endpoint)))
+            .configure(api_config)
             .service(Files::new("/", "static").show_files_listing())
     })
     .bind("127.0.0.1:8080")?
