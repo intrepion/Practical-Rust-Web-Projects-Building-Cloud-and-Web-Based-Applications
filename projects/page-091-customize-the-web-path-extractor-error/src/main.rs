@@ -10,7 +10,7 @@ use self::models::*;
 use self::schema::cats::dsl::*;
 
 use actix_files::Files;
-use actix_web::PathConfig;
+use actix_web::web::PathConfig;
 use actix_web::{error, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
