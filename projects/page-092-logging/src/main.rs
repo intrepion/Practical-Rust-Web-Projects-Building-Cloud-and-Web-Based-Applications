@@ -10,6 +10,7 @@ use self::models::*;
 use self::schema::cats::dsl::*;
 
 use actix_files::Files;
+use actix_web::middleware::Logger;
 use actix_web::web::PathConfig;
 use actix_web::{error, web, App, HttpResponse, HttpServer};
 use diesel::pg::PgConnection;
@@ -40,18 +41,28 @@ async fn cat_endpoint(
     pool: web::Data<DbPool>,
     cat_id: web::Path<CatEndpointPath>,
 ) -> Result<actix_web::HttpResponse, UserError> {
-    cat_id.validate().map_err(|_| UserError::ValidationError)?;
+    cat_id.validate().map_err(|_| {
+        log::warn!("Parameter validation failed");
+        UserError::ValidationError
+    })?;
 
-    let connection = pool.get().map_err(|_| UserError::DBPoolGetError)?;
+    let connection = pool.get().map_err(|_| {
+        log::error!("Failed to get DB connection from pool");
+        UserError::InternalError
+    })?;
 
     let query_id = cat_id.id.clone();
     let cat_data = web::block(move || cats.filter(id.eq(query_id)).first::<Cat>(&connection))
         .await
         .map_err(|e| match e {
             error::BlockingError::Error(diesel::result::Error::NotFound) => {
+                log::error!("Cat ID: {} not found in DB", &cat_id.id);
                 UserError::NotFoundError
             }
-            _ => UserError::UnexpectedError,
+            _ => {
+                log::error!("Unexpected error");
+                UserError::InternalError
+            }
         })?;
 
     Ok(HttpResponse::Ok().json(cat_data))
@@ -60,7 +71,11 @@ async fn cat_endpoint(
 async fn cats_endpoint(
     pool: web::Data<DbPool>,
 ) -> Result<actix_web::HttpResponse, actix_web::Error> {
-    let connection = pool.get().expect("Can't get db connection from pool");
+    let connection = pool.get().map_err(|_| {
+        log::error!("Can't get db connection from pool");
+        UserError::InternalError
+    })?;
+
     let cats_data = web::block(move || cats.limit(100).load::<Cat>(&connection))
         .await
         .map_err(|_| HttpResponse::InternalServerError().finish())?;
@@ -78,11 +93,14 @@ fn setup_database() -> DbPool {
 
 #[actix_web::main]
 async fn main() -> io::Result<()> {
+    env_logger::init();
+
     let pool = setup_database();
 
     println!("Listing on 127.0.0.1 with port 8080");
     HttpServer::new(move || {
         App::new()
+            .wrap(Logger::default())
             .data(pool.clone())
             .configure(api_config)
             .service(Files::new("/", "static").show_files_listing())
