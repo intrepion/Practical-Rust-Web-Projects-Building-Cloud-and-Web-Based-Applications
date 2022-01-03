@@ -14,11 +14,13 @@ use diesel::prelude::*;
 use diesel::r2d2::{self, ConnectionManager};
 use std::env;
 use std::io;
+use validator::Validate;
 
 type DbPool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, validator_derive::Validate)]
 struct CatEndpointPath {
+    #[validate(range(min = 1, max = 150))]
     id: i32,
 }
 
@@ -34,6 +36,10 @@ async fn cat_endpoint(
     pool: web::Data<DbPool>,
     cat_id: web::Path<CatEndpointPath>,
 ) -> Result<actix_web::HttpResponse, actix_web::Error> {
+    cat_id
+        .validate()
+        .map_err(|_| HttpResponse::BadRequest().finish())?;
+
     let connection = pool.get().expect("Can't get db connection from pool");
 
     let cat_data = web::block(move || cats.filter(id.eq(cat_id.id)).first::<Cat>(&connection))
