@@ -35,6 +35,11 @@ provider:
 #          - - "arn:aws:s3:::"
 #            - "Ref" : "ServerlessDeploymentBucket"
 #            - "/*"
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:Scan"
+      Resource: { "Fn::Join" : ["", ["arn:aws:dynamodb:*:*:table/", { "Ref" : "CatdexTable" } ] ]  }
 
 # you can define service wide environment variables here
 #  environment:
@@ -103,3 +108,18 @@ functions:
 #     NewOutput:
 #       Description: "Description for the output"
 #       Value: "Some output value"
+resources:
+  Resources:
+    CatdexTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: oliver_catdex
+        AttributeDefinitions:
+          - AttributeName: name
+            AttributeType: S
+        KeySchema:
+          - AttributeName: name
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
