@@ -1,18 +1,20 @@
-use lambda_http::{handler, lambda, IntoResponse, Request, Context};
-use serde_json::json;
+use lambda_http::lambda;
 
 type Error = Box<dyn std::error::Error + Sync + Send + 'static>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    lambda::run(handler(world)).await?;
+    lambda::run(lambda_http::handler(world)).await?;
     Ok(())
 }
 
-async fn world(_: Request, _: Context) -> Result<impl IntoResponse, Error> {
+async fn world(
+    _: lambda_http::Request,
+    _: lambda_http::Context,
+) -> Result<impl lambda_http::IntoResponse, Error> {
     // `serde_json::Values` impl `IntoResponse` by default
     // creating an application/json response
-    Ok(json!({
+    Ok(serde_json::json!({
     "message": "Go Serverless v1.0! Your function executed successfully!"
     }))
 }
@@ -23,12 +25,12 @@ mod tests {
 
     #[tokio::test]
     async fn world_handles() {
-        let request = Request::default();
+        let request = lambda::Request::default();
         let expected = json!({
         "message": "Go Serverless v1.0! Your function executed successfully!"
         })
         .into_response();
-        let response = world(request, Context::default())
+        let response = world(request, lambda::Context::default())
             .await
             .expect("expected Ok(_) value")
             .into_response();
