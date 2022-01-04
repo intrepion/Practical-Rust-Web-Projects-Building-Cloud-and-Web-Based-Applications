@@ -11,22 +11,24 @@ struct CustomOutput {
     message: String,
 }
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+#[tokio::main]
+async fn main() -> Result<(), lambda_runtime::Error> {
     SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
         .with_utc_timestamps()
         .init()?;
-    lambda_runtime::lambda!(my_handler);
+    let func = lambda_runtime::handler_fn(my_handler);
+    lambda_runtime::run(func).await?;
 
     Ok(())
 }
 
-fn my_handler(
+async fn my_handler(
     e: CustomEvent,
     c: lambda_runtime::Context,
-) -> Result<CustomOutput, lambda_runtime::error::HandlerError> {
+) -> Result<CustomOutput, lambda_runtime::Error> {
     if e.first_name == "" {
-        log::error!("Empty first name in request {}", c.aws_request_id);
+        log::error!("Empty first name in request {}", c.request_id);
         simple_error::bail!("Empty first name");
     }
 
