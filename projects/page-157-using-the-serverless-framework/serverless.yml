@@ -123,3 +123,7 @@ resources:
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
+
+custom:
+  rust:
+    dockerless: true
