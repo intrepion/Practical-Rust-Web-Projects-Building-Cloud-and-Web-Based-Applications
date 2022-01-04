@@ -6,3 +6,15 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+lambda_runtime = "0.2.1"
+log = "0.4.14"
+serde = "1.0.133"
+serde_derive = "1.0.133"
+serde_json = "1.0.74"
+simple-error = "0.2.3"
+simple_logger = "1.16.0"
+tokio = "1.15.0"
+
+[[bin]]
+name = "bootstrap"
+path = "src/main.rs"
