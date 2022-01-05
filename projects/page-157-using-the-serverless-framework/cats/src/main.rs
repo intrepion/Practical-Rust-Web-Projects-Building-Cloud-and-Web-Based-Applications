@@ -1,7 +1,7 @@
 use lambda_http::http::{Response, StatusCode};
 use lambda_http::{handler, lambda, Context, IntoResponse, Request};
-use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ScanInput};
 use rusoto_core::Region;
+use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ScanInput};
 use serde_json::json;
 use std::collections::HashMap;
 
