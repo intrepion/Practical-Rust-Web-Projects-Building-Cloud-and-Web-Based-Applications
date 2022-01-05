@@ -1,39 +1,44 @@
-use lambda_http::lambda;
+use lambda_http::http::{Response, StatusCode};
+use lambda_http::{handler, lambda, Context, IntoResponse, Request};
+use rusoto_dynamodb::{DynamoDb, DynamoDbClient, ScanInput};
+use rusoto_core::Region;
+use serde_json::json;
+use std::collections::HashMap;
 
 type Error = Box<dyn std::error::Error + Sync + Send + 'static>;
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    lambda::run(lambda_http::handler(world)).await?;
+    lambda::run(handler(cats)).await?;
     Ok(())
 }
 
-async fn world(
-    _: lambda_http::Request,
-    _: lambda_http::Context,
-) -> Result<impl lambda_http::IntoResponse, Error> {
-    // `serde_json::Values` impl `IntoResponse` by default
-    // creating an application/json response
-    Ok(serde_json::json!({
-    "message": "Go Serverless v1.0! Your function executed successfully!"
-    }))
-}
+async fn cats(_: Request, _: Context) -> Result<impl IntoResponse, Error> {
+    let client = DynamoDbClient::new(Region::UsWest2);
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+    let scan_input = ScanInput {
+        table_name: "oliver_catdex".to_string(),
+        limit: Some(100),
+        ..Default::default()
+    };
 
-    #[tokio::test]
-    async fn world_handles() {
-        let request = lambda::Request::default();
-        let expected = json!({
-        "message": "Go Serverless v1.0! Your function executed successfully!"
-        })
-        .into_response();
-        let response = world(request, lambda::Context::default())
-            .await
-            .expect("expected Ok(_) value")
-            .into_response();
-        assert_eq!(response.body(), expected.body())
-    }
+    let response = match client.scan(scan_input).await {
+        Ok(output) => match output.items {
+            Some(items) => json!(items
+                .into_iter()
+                .map(|item| item.into_iter().map(|(k, v)| (k, v.s.unwrap())).collect())
+                .collect::<Vec<HashMap<String, String>>>())
+            .into_response(),
+            None => Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body("No cat yet".into())
+                .expect("Failed to render response"),
+        },
+        Err(error) => Response::builder()
+            .status(StatusCode::INTERNAL_SERVER_ERROR)
+            .body(format!("{:?}", error).into())
+            .expect("Failed to render response"),
+    };
+
+    Ok(response)
 }
